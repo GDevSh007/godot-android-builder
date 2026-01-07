@@ -13,11 +13,13 @@ jobs:
         working-directory: godot-source
 
     steps:
+      # 1. Checkout YOUR repo (where ludmax.gdbuild lives)
       - name: Checkout Configs
         uses: actions/checkout@v4
         with:
           path: config-repo
 
+      # 2. Checkout Godot Source
       - name: Checkout Godot Source
         uses: actions/checkout@v4
         with:
@@ -49,26 +51,21 @@ jobs:
         run: |
           TAG="from-source-2025-01-31"
           ASSET_NAME="godot-swappy.7z"
-          
-          curl -L -o godot-swappy.7z \
-            https://github.com/godotengine/godot-swappy/releases/download/$TAG/$ASSET_NAME
-          
-          # FIX: No space after -o
+          curl -L -o godot-swappy.7z https://github.com/godotengine/godot-swappy/releases/download/$TAG/$ASSET_NAME
           mkdir -p thirdparty/swappy-frame-pacing
           7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
-          
-          # Clean up naming inside the folder
           cd thirdparty/swappy-frame-pacing
           mv android.*/* . 2>/dev/null || true
           cd ../..
           rm -f godot-swappy.7z
 
+      # 3. Compilation (Using absolute path for the build profile)
       - name: Compilation Debug
         run: |
           scons platform=android \
                 target=template_debug \
                 arch=arm64 \
-                build_profile=../config-repo/.github/workflows/ludmax.gdbuild \
+                build_profile=$GITHUB_WORKSPACE/config-repo/.github/workflows/ludmax.gdbuild \
                 dev_mode=yes \
                 module_text_server_fb_enabled=yes \
                 tests=no \
@@ -79,7 +76,7 @@ jobs:
           scons platform=android \
                 target=template_release \
                 arch=arm64 \
-                build_profile=../config-repo/.github/workflows/ludmax.gdbuild \
+                build_profile=$GITHUB_WORKSPACE/config-repo/.github/workflows/ludmax.gdbuild \
                 dev_mode=yes \
                 module_text_server_fb_enabled=yes \
                 tests=no \
