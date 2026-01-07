@@ -8,13 +8,13 @@ jobs:
     name: Android Arm64 Template
     timeout-minutes: 90
     
-    # This ensures all 'run' commands happen inside the Godot source folder
+    # All 'run' commands will execute inside the Godot source folder
     defaults:
       run:
         working-directory: godot-source
 
     steps:
-      # 1. Checkout YOUR repo (to get ludmax.gdbuild)
+      # 1. Checkout your repo (to get ludmax.gdbuild)
       - name: Checkout Configs
         uses: actions/checkout@v4
         with:
@@ -45,12 +45,27 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 3. Download Swappy (Now runs inside godot-source correctly)
-      - name: Download Swappy
-        run: python ./misc/scripts/install_swappy_android.py
+      # 3. Install 7zip (required for extracting Swappy)
+      - name: Install 7zip
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
 
-      # 4. Compilation
-      - name: Compilation
+      # 4. Download and install latest Swappy prebuilts
+      - name: Download and Extract Swappy
+        run: |
+          # Get the latest release tag automatically
+          TAG=$(curl -s https://api.github.com/repos/godotengine/godot-swappy/releases/latest | grep '"tag_name"' | cut -d '"' -f 4)
+          echo "Downloading Swappy version: $TAG"
+          
+          # Download the .7z file (asset is always named godot-swappy.7z in recent releases)
+          curl -L -o godot-swappy.7z \
+            https://github.com/godotengine/godot-swappy/releases/download/$TAG/godot-swappy.7z
+          
+          # Extract directly into thirdparty/swappy-frame-pacing
+          mkdir -p thirdparty/swappy-frame-pacing
+          7z x godot-swappy.7z -o thirdparty/swappy-frame-pacing -y
+
+      # 5. Compile Debug template
+      - name: Compilation Debug
         run: |
           scons platform=android \
                 target=template_debug \
@@ -61,12 +76,25 @@ jobs:
                 tests=no \
                 swappy=yes
 
-      # 5. Package the APKs
-      - name: Generate Godot templates
+      # 6. Compile Release template (required for generateGodotTemplates)
+      - name: Compilation Release
+        run: |
+          scons platform=android \
+                target=template_release \
+                arch=arm64 \
+                build_profile=../config-repo/.github/workflows/ludmax.gdbuild \
+                dev_mode=yes \
+                module_text_server_fb_enabled=yes \
+                tests=no \
+                swappy=yes
+
+      # 7. Package the APKs / Templates
+      - name: Generate Godot Templates
         run: |
           cd platform/android/java
           ./gradlew generateGodotTemplates
 
+      # 8. Upload the resulting templates as artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
