@@ -47,28 +47,21 @@ jobs:
 
       - name: Download and Extract Swappy
         run: |
-          # Pin to the known working release as of January 2026
           TAG="from-source-2025-01-31"
           ASSET_NAME="godot-swappy.7z"
           
-          echo "Downloading Swappy from tag: $TAG"
           curl -L -o godot-swappy.7z \
             https://github.com/godotengine/godot-swappy/releases/download/$TAG/$ASSET_NAME
           
-          # Extract directly into thirdparty/swappy-frame-pacing
+          # FIX: No space after -o
           mkdir -p thirdparty/swappy-frame-pacing
-          7z x godot-swappy.7z -o thirdparty/swappy-frame-pacing -y
+          7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
           
-          # Rename folders if they have 'android.' prefix (common in Swappy prebuilts)
+          # Clean up naming inside the folder
           cd thirdparty/swappy-frame-pacing
-          for dir in android.*; do
-            if [ -d "$dir" ]; then
-              newname=$(echo $dir | sed 's/^android\.//')
-              mv "$dir" "$newname"
-            fi
-          done
-          
-          rm -f ../godot-swappy.7z  # Clean up
+          mv android.*/* . 2>/dev/null || true
+          cd ../..
+          rm -f godot-swappy.7z
 
       - name: Compilation Debug
         run: |
