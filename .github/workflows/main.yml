@@ -65,7 +65,7 @@ jobs:
           scons platform=android \
                 target=template_debug \
                 arch=arm64 \
-                build_profile=$GITHUB_WORKSPACE/config-repo/.github/workflows/ludmax.gdbuild \
+                build_profile=$GITHUB_WORKSPACE/config-repo/ludmax.gdbuild \
                 dev_mode=yes \
                 module_text_server_fb_enabled=yes \
                 tests=no \
@@ -76,7 +76,7 @@ jobs:
           scons platform=android \
                 target=template_release \
                 arch=arm64 \
-                build_profile=$GITHUB_WORKSPACE/config-repo/.github/workflows/ludmax.gdbuild \
+                build_profile=$GITHUB_WORKSPACE/config-repo/ludmax.gdbuild \
                 dev_mode=yes \
                 module_text_server_fb_enabled=yes \
                 tests=no \
