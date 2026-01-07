@@ -49,21 +49,17 @@ jobs:
         run: |
           # Pin to the known working release as of January 2026
           TAG="from-source-2025-01-31"
-          ASSET_NAME="gamesdk.zip"  # Current asset name in recent releases
+          ASSET_NAME="godot-swappy.7z"
           
           echo "Downloading Swappy from tag: $TAG"
-          curl -L -o swappy.zip \
+          curl -L -o godot-swappy.7z \
             https://github.com/godotengine/godot-swappy/releases/download/$TAG/$ASSET_NAME
           
-          # Extract the required swappy_static folder
+          # Extract directly into thirdparty/swappy-frame-pacing
           mkdir -p thirdparty/swappy-frame-pacing
-          7z x swappy.zip "games-frame-pacing-release.aar_FILES/prefab/modules/swappy_static/*" -o temp_swappy -y
-          mv temp_swappy/games-frame-pacing-release.aar_FILES/prefab/modules/swappy_static/* thirdparty/swappy-frame-pacing/
-          rm -rf temp_swappy swappy.zip
+          7z x godot-swappy.7z -o thirdparty/swappy-frame-pacing -y
           
-          # Godot expects specific folder names inside thirdparty/swappy-frame-pacing
-          # (arm64-v8a, armeabi-v7a, x86_64, etc.)
-          # Recent prebuilts use "android.arm64-v8a" etc. with "android." prefix – rename if needed
+          # Rename folders if they have 'android.' prefix (common in Swappy prebuilts)
           cd thirdparty/swappy-frame-pacing
           for dir in android.*; do
             if [ -d "$dir" ]; then
@@ -71,6 +67,8 @@ jobs:
               mv "$dir" "$newname"
             fi
           done
+          
+          rm -f ../godot-swappy.7z  # Clean up
 
       - name: Compilation Debug
         run: |
