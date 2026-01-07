@@ -8,19 +8,16 @@ jobs:
     name: Android Arm64 Template
     timeout-minutes: 90
     
-    # All 'run' commands will execute inside the Godot source folder
     defaults:
       run:
         working-directory: godot-source
 
     steps:
-      # 1. Checkout your repo (to get ludmax.gdbuild)
       - name: Checkout Configs
         uses: actions/checkout@v4
         with:
           path: config-repo
 
-      # 2. Checkout Godot Source at 4.5.1-stable
       - name: Checkout Godot Source
         uses: actions/checkout@v4
         with:
@@ -45,26 +42,36 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 3. Install 7zip (required for extracting Swappy)
       - name: Install 7zip
         run: sudo apt-get update && sudo apt-get install -y p7zip-full
 
-      # 4. Download and install latest Swappy prebuilts
       - name: Download and Extract Swappy
         run: |
-          # Get the latest release tag automatically
-          TAG=$(curl -s https://api.github.com/repos/godotengine/godot-swappy/releases/latest | grep '"tag_name"' | cut -d '"' -f 4)
-          echo "Downloading Swappy version: $TAG"
+          # Pin to the known working release as of January 2026
+          TAG="from-source-2025-01-31"
+          ASSET_NAME="gamesdk.zip"  # Current asset name in recent releases
           
-          # Download the .7z file (asset is always named godot-swappy.7z in recent releases)
-          curl -L -o godot-swappy.7z \
-            https://github.com/godotengine/godot-swappy/releases/download/$TAG/godot-swappy.7z
+          echo "Downloading Swappy from tag: $TAG"
+          curl -L -o swappy.zip \
+            https://github.com/godotengine/godot-swappy/releases/download/$TAG/$ASSET_NAME
           
-          # Extract directly into thirdparty/swappy-frame-pacing
+          # Extract the required swappy_static folder
           mkdir -p thirdparty/swappy-frame-pacing
-          7z x godot-swappy.7z -o thirdparty/swappy-frame-pacing -y
+          7z x swappy.zip "games-frame-pacing-release.aar_FILES/prefab/modules/swappy_static/*" -o temp_swappy -y
+          mv temp_swappy/games-frame-pacing-release.aar_FILES/prefab/modules/swappy_static/* thirdparty/swappy-frame-pacing/
+          rm -rf temp_swappy swappy.zip
+          
+          # Godot expects specific folder names inside thirdparty/swappy-frame-pacing
+          # (arm64-v8a, armeabi-v7a, x86_64, etc.)
+          # Recent prebuilts use "android.arm64-v8a" etc. with "android." prefix – rename if needed
+          cd thirdparty/swappy-frame-pacing
+          for dir in android.*; do
+            if [ -d "$dir" ]; then
+              newname=$(echo $dir | sed 's/^android\.//')
+              mv "$dir" "$newname"
+            fi
+          done
 
-      # 5. Compile Debug template
       - name: Compilation Debug
         run: |
           scons platform=android \
@@ -76,7 +83,6 @@ jobs:
                 tests=no \
                 swappy=yes
 
-      # 6. Compile Release template (required for generateGodotTemplates)
       - name: Compilation Release
         run: |
           scons platform=android \
@@ -88,13 +94,11 @@ jobs:
                 tests=no \
                 swappy=yes
 
-      # 7. Package the APKs / Templates
       - name: Generate Godot Templates
         run: |
           cd platform/android/java
           ./gradlew generateGodotTemplates
 
-      # 8. Upload the resulting templates as artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
