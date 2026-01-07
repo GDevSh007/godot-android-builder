@@ -1,0 +1,61 @@
+name: Rebuild Godot 4.5.1 Android Template
+on: 
+  push:
+  workflow_dispatch: # Allows you to run it manually from the Actions tab
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Get the Godot 4.5.1 source code from the official repository
+      - name: Checkout Godot Source
+        uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: '4.5.1-stable'
+          path: godot-source
+
+      # 2. Get YOUR custom settings (from the repo where you pasted this YAML)
+      - name: Checkout Custom Config
+        uses: actions/checkout@v4
+        with:
+          path: config-repo
+
+      # 3. Setup Java 17 (Required for Godot 4.x Android builds)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 4. Setup Android SDK and NDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 5. Install SCons (The build tool Godot uses)
+      - name: Install SCons
+        run: python -m pip install scons
+
+      # 6. Run the compilation
+      # This step copies ludmax.gdbuild file and renames it to 'custom.py'
+      # which Godot's SCons system automatically recognizes.
+      - name: Compile Android Template
+        run: |
+          cp config-repo/your.gdbuild godot-source/custom.py
+          cd godot-source
+          # Compiling for ARM64 (standard for modern phones)
+          scons platform=android target=template_release arch=arm64
+
+      # 7. Generate the Final Android AAR file
+      - name: Build Android AAR
+        run: |
+          cd godot-source/platform/android/java
+          ./gradlew generateRepo
+          ./gradlew assembleRelease
+
+      # 8. Save the result so you can download it
+      - name: Upload Template Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-4.5.1-android-template
+          path: godot-source/bin/*.aar
