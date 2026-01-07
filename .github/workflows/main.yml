@@ -7,6 +7,12 @@ jobs:
     runs-on: ubuntu-24.04
     name: Android Arm64 Template
     timeout-minutes: 90
+    
+    # This ensures all 'run' commands happen inside the Godot source folder
+    defaults:
+      run:
+        working-directory: godot-source
+
     steps:
       # 1. Checkout YOUR repo (to get ludmax.gdbuild)
       - name: Checkout Configs
@@ -39,40 +45,26 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 3. Official GitHub Cache (Speeds up future builds)
-      - name: SCons Cache
-        uses: actions/cache@v4
-        with:
-          path: godot-source/.scons_cache
-          key: android-arm64-godot-4.5.1-${{ github.ref }}
-          restore-keys: |
-            android-arm64-godot-4.5.1-
-
-      # 4. Run the Swappy script
+      # 3. Download Swappy (Now runs inside godot-source correctly)
       - name: Download Swappy
-        run: |
-          cd godot-source
-          python ./misc/scripts/install_swappy_android.py
+        run: python ./misc/scripts/install_swappy_android.py
 
-      # 5. Compilation
+      # 4. Compilation
       - name: Compilation
         run: |
-          cd godot-source
           scons platform=android \
                 target=template_debug \
                 arch=arm64 \
                 build_profile=../config-repo/.github/workflows/ludmax.gdbuild \
-                use_static_cpp=yes \
                 dev_mode=yes \
                 module_text_server_fb_enabled=yes \
                 tests=no \
-                swappy=yes \
-                scons_cache=.scons_cache
+                swappy=yes
 
-      # 6. Package the APKs
+      # 5. Package the APKs
       - name: Generate Godot templates
         run: |
-          cd godot-source/platform/android/java
+          cd platform/android/java
           ./gradlew generateGodotTemplates
 
       - name: Upload artifact
