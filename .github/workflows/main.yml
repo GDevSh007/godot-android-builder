@@ -1,0 +1,82 @@
+name: Build Godot Android arm64 Export Template
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-template:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+      ANDROID_NDK_VERSION: "28.1.13356709"   # r28b
+      ANDROID_BUILD_TOOLS: "35.0.0"
+      ANDROID_API_LEVEL: "35"
+      GODOT_TAG: "4.5.1-stable"
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install apt packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            openjdk-17-jdk python3 python3-pip git unzip cmake clang pkg-config build-essential
+          python3 -m pip install --upgrade pip
+          python3 -m pip install scons
+
+      - name: Install Android command-line tools
+        run: |
+          mkdir -p "${ANDROID_SDK_ROOT}/cmdline-tools"
+          cd /tmp
+          # Download command-line tools (update URL if Google changes it)
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d "${ANDROID_SDK_ROOT}/cmdline-tools"
+          # Move to conventional location
+          mkdir -p "${ANDROID_SDK_ROOT}/cmdline-tools/latest"
+          mv "${ANDROID_SDK_ROOT}/cmdline-tools/cmdline-tools"/* "${ANDROID_SDK_ROOT}/cmdline-tools/latest/" || true
+          yes | "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --sdk_root="${ANDROID_SDK_ROOT}" --licenses
+          "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --sdk_root="${ANDROID_SDK_ROOT}" "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${ANDROID_NDK_VERSION}" "cmake;3.10.2.4988404"
+
+      - name: Set ANDROID_NDK_ROOT
+        run: echo "ANDROID_NDK_ROOT=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> $GITHUB_ENV
+
+      - name: Clone Godot 4.5.1 stable
+        run: |
+          git clone --depth 1 --branch ${GODOT_TAG} https://github.com/godotengine/godot.git godot-src
+
+      - name: Apply build profile (optional)
+        run: |
+          # If you have ludmax.gdbuild in the repo and want to use it to guide flags,
+          # parse it and map to scons flags here. For now we build a conservative template.
+          ls -la
+          if [ -f .github/workflows/ludmax.gdbuild ]; then
+            echo "Found ludmax.gdbuild; you may translate it to SCons options if needed."
+          fi
+
+      - name: Build arm64 export template (template_release)
+        working-directory: godot-src
+        env:
+          PATH: /usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH
+        run: |
+          # Make sure scons is on PATH (installed via pip)
+          python3 -c "import SCons" || true
+          # Build export template for arm64-v8a
+          scons -j$(nproc) platform=android target=template_release tools=no android_arch=arm64v8 ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT}" ANDROID_NDK_ROOT="${ANDROID_NDK_ROOT}" use_lto=yes
+
+      - name: Collect artifacts
+        run: |
+          # Godot puts templates in bin/templates/android/
+          ls -la godot-src/bin/templates/android || true
+
+      - name: Upload template artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-android-templates-arm64
+          path: |
+            godot-src/bin/templates/android/*.apk
+            godot-src/bin/templates/android/**/*arm64*.apk
