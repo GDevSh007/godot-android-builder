@@ -1,4 +1,4 @@
-name: 🤖 Android Arm64 Template (Godot 4.5.1)
+name: 🤖 Android Arm64 Template (Godot 4.6.3)
 on:
   workflow_dispatch:
 
@@ -13,7 +13,7 @@ jobs:
         working-directory: godot-source
 
     steps:
-      # 1. Checkout YOUR repo (where ludmax.gdbuild lives)
+      # 1. Checkout YOUR repo (where 2DBasics.gdbuild lives)
       - name: Checkout Configs
         uses: actions/checkout@v4
         with:
@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: godotengine/godot
-          ref: 4.5.1-stable
+          ref: 4.6.3-stable
           path: godot-source
 
       - name: Set up Java 17
@@ -65,7 +65,7 @@ jobs:
           scons platform=android \
                 target=template_debug \
                 arch=arm64 \
-                build_profile=$GITHUB_WORKSPACE/config-repo/ludmax.gdbuild \
+                build_profile=$GITHUB_WORKSPACE/config-repo/2DBasics.gdbuild \
                 dev_mode=yes \
                 module_text_server_fb_enabled=yes \
                 tests=no \
@@ -76,7 +76,7 @@ jobs:
           scons platform=android \
                 target=template_release \
                 arch=arm64 \
-                build_profile=$GITHUB_WORKSPACE/config-repo/ludmax.gdbuild \
+                build_profile=$GITHUB_WORKSPACE/config-repo/2DBasics.gdbuild \
                 dev_mode=yes \
                 module_text_server_fb_enabled=yes \
                 tests=no \
@@ -90,5 +90,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-template-4.5.1-arm64
+          name: android-template-4.6.3-arm64
           path: godot-source/bin/
