@@ -14,7 +14,9 @@
 		"module_msdfgen_enabled": false,
 		"module_openxr_enabled": false,
 		"rendering_device": false,
-		"vulkan": false
+		"vulkan": false,
+        "wayland": false,
+		"x11": false
 	},
 	"disabled_classes": [
 		"AnimatedTexture",
