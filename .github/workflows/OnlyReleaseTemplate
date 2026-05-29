@@ -1,4 +1,4 @@
-name: 🤖 Android Arm64 Template (Godot 4.6.3)
+name: 🤖 Android Arm64 Release Template Only (Godot 4.6.3)
 on:
   workflow_dispatch:
 
