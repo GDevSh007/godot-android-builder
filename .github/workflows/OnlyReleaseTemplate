@@ -13,7 +13,7 @@ jobs:
         working-directory: godot-source
 
     steps:
-      # 1. Checkout YOUR repo (where 2DBasics.gdbuild lives)
+      # 1. Checkout YOUR repo (where LudoMaxBuildProfile.gdbuild lives)
       - name: Checkout Configs
         uses: actions/checkout@v4
         with:
@@ -65,7 +65,7 @@ jobs:
           scons platform=android \
                 target=template_release \
                 arch=arm64 \
-                build_profile=$GITHUB_WORKSPACE/config-repo/2DBasics.gdbuild \
+                build_profile=$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild \
                 dev_mode=yes \
                 module_text_server_fb_enabled=yes \
                 tests=no \
@@ -80,4 +80,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-template-4.6.3-arm64
-          path: godot-source/bin/
+          path: |
+            godot-source/bin/*.apk
+            godot-source/bin/*.aar
+            godot-source/bin/*.zip
