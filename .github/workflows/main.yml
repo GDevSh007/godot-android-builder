@@ -91,4 +91,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-template-4.6.3-arm64
-          path: godot-source/bin/
+          path: |
+            godot-source/bin/*.apk
+            godot-source/bin/*.aar
+            godot-source/bin/*.zip
+
