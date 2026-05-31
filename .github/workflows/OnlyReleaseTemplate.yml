@@ -86,4 +86,3 @@ jobs:
           path: |
             godot-source/bin/*.apk
             godot-source/bin/*.aar
-            godot-source/bin/*.zip
