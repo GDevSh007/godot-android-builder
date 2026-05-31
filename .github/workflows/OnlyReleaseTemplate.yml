@@ -59,7 +59,7 @@ jobs:
           cd ../..
           rm -f godot-swappy.7z
 
-      # 3. Compilation (Using absolute path for the build profile)
+      # 3. Compilation (The Absolute Lightest 2D Engine Configuration)
       - name: Compilation Release
         run: |
           scons platform=android \
@@ -69,8 +69,15 @@ jobs:
                 optimize=size \
                 lto=full \
                 debug_symbols=no \
+                rendering_device=no \
+                vulkan=no \
+                opengl=yes \
                 module_text_server_adv_enabled=no \
                 module_text_server_fb_enabled=yes \
+                module_webrtc_enabled=no \
+                module_websocket_enabled=no \
+                module_svg_enabled=no \
+                module_upnp_enabled=no \
                 tests=no \
                 swappy=yes
 
