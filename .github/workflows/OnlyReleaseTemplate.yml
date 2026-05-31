@@ -77,10 +77,6 @@ jobs:
                 optimize=size \
                 lto=full \
                 debug_symbols=no \
-                module_text_server_adv_enabled=no \
-                module_text_server_fb_enabled=yes \
-                module_webrtc_enabled=no \
-                module_websocket_enabled=no \
                 module_svg_enabled=no \
                 module_upnp_enabled=no \
                 module_regex_enabled=no \
