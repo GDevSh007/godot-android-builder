@@ -77,10 +77,7 @@ jobs:
                 optimize=size \
                 lto=full \
                 debug_symbols=no \
-                module_svg_enabled=no \
-                module_upnp_enabled=no \
-                module_regex_enabled=no \
-                module_noise_enabled=no \
+                module_text_server_fb_enabled=yes \
                 tests=no \
                 swappy=yes
 
