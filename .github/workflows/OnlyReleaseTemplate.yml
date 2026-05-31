@@ -62,6 +62,14 @@ jobs:
       # 3. Compilation (The Absolute Lightest 2D Engine Configuration)
       - name: Compilation Release
         run: |
+          # Inject low-level system removals into custom.py so SCons evaluates them
+          echo 'rendering_device = "no"' >> custom.py
+          echo 'vulkan = "no"' >> custom.py
+          echo 'opengl = "yes"' >> custom.py
+          echo 'deprecated = "no"' >> custom.py
+          echo 'minizip = "no"' >> custom.py
+
+          # Execute SCons passing explicit true/false module parameters
           scons platform=android \
                 target=template_release \
                 arch=arm64 \
@@ -69,15 +77,14 @@ jobs:
                 optimize=size \
                 lto=full \
                 debug_symbols=no \
-                rendering_device=no \
-                vulkan=no \
-                opengl=yes \
                 module_text_server_adv_enabled=no \
                 module_text_server_fb_enabled=yes \
                 module_webrtc_enabled=no \
                 module_websocket_enabled=no \
                 module_svg_enabled=no \
                 module_upnp_enabled=no \
+                module_regex_enabled=no \
+                module_noise_enabled=no \
                 tests=no \
                 swappy=yes
 
