@@ -62,17 +62,15 @@ jobs:
           cd ../..
           rm -f godot-swappy.7z
 
-      # 4. Setup Encryption Key
+      # 4. Setup Encryption Key (Strict validation)
       - name: Resolve Encryption Key
         id: crypto-setup
         run: |
           if [ -z "${{ secrets.GODOT_ENCRYPTION_KEY }}" ]; then
-            GENERATED_KEY=$(openssl rand -hex 32)
-            echo "::warning:: No GODOT_ENCRYPTION_KEY secret found! Auto-generated key for this run: $GENERATED_KEY"
-            echo "encryption_key=$GENERATED_KEY" >> $GITHUB_OUTPUT
-          else
-            echo "encryption_key=${{ secrets.GODOT_ENCRYPTION_KEY }}" >> $GITHUB_OUTPUT
+            echo "::error:: Critical: GODOT_ENCRYPTION_KEY secret is missing or empty! Aborting build."
+            exit 1
           fi
+          echo "encryption_key=${{ secrets.GODOT_ENCRYPTION_KEY }}" >> $GITHUB_OUTPUT
 
       # 5. Inject SCons settings via custom.py
       - name: Configure Engine Demands
