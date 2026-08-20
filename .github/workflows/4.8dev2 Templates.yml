@@ -28,7 +28,7 @@ jobs:
           path: godot-source
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -115,11 +115,14 @@ jobs:
                 tests=no \
                 swappy=yes
 
-      # 7. Process compiled libraries into usable Android APKs/AARs
-      - name: Generate Godot Templates via Gradle
-        run: |
-          cd platform/android/java
-          ./gradlew generateGodotTemplates
+      # 7. Upload compiled artifacts from the correct Godot root bin/ folder
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: android-templates-4.8-dev2-encrypted-arm64
+          path: |
+            godot-source/bin/*.apk
+            godot-source/bin/*.aar
 
       # 8. Upload compiled artifacts
       - name: Upload Artifacts
