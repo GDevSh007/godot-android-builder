@@ -20,7 +20,6 @@
 		"module_msdfgen_enabled": false,
 		"module_openxr_enabled": false,
 		"pulseaudio": false,
-		"rendering_device": false,
 		"sdl": false,
 		"vulkan": false,
 		"wayland": false,
