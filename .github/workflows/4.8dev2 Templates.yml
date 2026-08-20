@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: godotengine/godot
-          ref: 7220d456dcf116ae5499505a237b449c0b00cfce  # FIX: Targets exact 4.8-dev2 source tree
+          ref: 7220d456dcf116ae5499505a237b449c0b00cfce
           path: godot-source
 
       - name: Set up Java 17
@@ -47,11 +47,11 @@ jobs:
       - name: Install 7zip
         run: sudo apt-get update && sudo apt-get install -y p7zip-full
 
-      # Download and extract the frame-pacing helper dependencies
+      # 3. Download and extract the frame-pacing helper dependencies
       - name: Download and Extract Swappy
         run: |
-          # Hardcoded absolute URL prevents any variable syntax typos
-          curl -L -o godot-swappy.7z "https://github.com"
+          # FIXED: Direct link to the official Godot Swappy frame-pacing release asset
+          curl -L -o godot-swappy.7z "https://github.com/godotengine/godot-swappy/releases/download/from-source-2025-01-31/godot-swappy.7z"
           mkdir -p thirdparty/swappy-frame-pacing
           7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
           cd thirdparty/swappy-frame-pacing
@@ -59,7 +59,7 @@ jobs:
           cd ../..
           rm -f godot-swappy.7z
 
-      # 3. Setup Encryption Key
+      # 4. Setup Encryption Key
       - name: Resolve Encryption Key
         id: crypto-setup
         run: |
@@ -71,17 +71,16 @@ jobs:
             echo "encryption_key=${{ secrets.GODOT_ENCRYPTION_KEY }}" >> $GITHUB_OUTPUT
           fi
 
-      # 4. Inject SCons settings via custom.py using explicit Python boolean rules
+      # 5. Inject SCons settings via custom.py
       - name: Configure Engine Demands
         run: |
-          # Keep rendering_device True so the engine links smoothly without compiler errors
           echo 'rendering_device = True' >> custom.py
           echo 'vulkan = False' >> custom.py
           echo 'opengl = True' >> custom.py
           echo 'deprecated = False' >> custom.py
           echo 'minizip = False' >> custom.py
 
-      # 5. Compilation Steps (Debug + Release Templates embedded with encryption)
+      # 6. Compilation Steps (Debug + Release Templates embedded with encryption)
       - name: Compile Release Template
         env:
           GODOT_VERSION_STATUS: dev2
@@ -116,13 +115,13 @@ jobs:
                 tests=no \
                 swappy=yes
 
-      # 6. Process compiled libraries into usable Android APKs/AARs
+      # 7. Process compiled libraries into usable Android APKs/AARs
       - name: Generate Godot Templates via Gradle
         run: |
           cd platform/android/java
           ./gradlew generateGodotTemplates
 
-      # 7. Upload compiled artifacts using Godot's internal structure path mapping
+      # 8. Upload compiled artifacts
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
