@@ -1,30 +1,30 @@
-name: 🤖 Android Universal Template (Godot 4.5.1)
+name: 🤖 Android Arm64 Template + PCK Encryption (Godot 4.8-dev2)
 on:
   workflow_dispatch:
 
 jobs:
   build-android:
     runs-on: ubuntu-24.04
-    name: Android Universal Template (Arm64 + Arm32)
-    timeout-minutes: 120 # Increased timeout for double compilation
+    name: Android Arm64 Template Build
+    timeout-minutes: 90
     
     defaults:
       run:
         working-directory: godot-source
 
     steps:
-      # 1. Checkout YOUR repo (where ludmax.gdbuild lives)
+      # 1. Checkout Your Configuration Repo
       - name: Checkout Configs
         uses: actions/checkout@v4
         with:
           path: config-repo
 
-      # 2. Checkout Godot Source
+      # 2. Checkout Godot Source at 4.8-dev2 Tag
       - name: Checkout Godot Source
         uses: actions/checkout@v4
         with:
           repository: godotengine/godot
-          ref: 4.5.1-stable
+          ref: 4.8-dev2
           path: godot-source
 
       - name: Set up Java 17
@@ -44,88 +44,90 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # CRITICAL FIX: Install the specific NDK version for Godot 4
-      - name: Install Android NDK
-        run: |
-          sdkmanager --install "ndk;23.2.8568313" --channel=3
-          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/23.2.8568313" >> $GITHUB_ENV
-
       - name: Install 7zip
         run: sudo apt-get update && sudo apt-get install -y p7zip-full
 
+      # Download and extract the frame-pacing helper dependencies
       - name: Download and Extract Swappy
         run: |
           TAG="from-source-2025-01-31"
           ASSET_NAME="godot-swappy.7z"
-          curl -L -o godot-swappy.7z https://github.com/godotengine/godot-swappy/releases/download/$TAG/$ASSET_NAME
+          curl -L -o godot-swappy.7z https://github.com
           mkdir -p thirdparty/swappy-frame-pacing
           7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
           cd thirdparty/swappy-frame-pacing
-          # Safety check: move contents if nested in a folder named android.*
-          mv android.*/* . 2>/dev/null || true
+          if [ -d android.* ]; then mv android.*/* .; fi
           cd ../..
           rm -f godot-swappy.7z
 
-      # 3. Compilation (Compiling BOTH Architectures)
-      
-      # --- ARM64 Builds ---
-      - name: Compilation Debug (Arm64)
+      # 3. Setup Encryption Key
+      - name: Resolve Encryption Key
+        id: crypto-setup
+        run: |
+          # Check if secret exists, otherwise auto-generate a valid 64-character hex key
+          if [ -z "${{ secrets.GODOT_ENCRYPTION_KEY }}" ]; then
+            GENERATED_KEY=$(openssl rand -hex 32)
+            echo "::warning:: No GODOT_ENCRYPTION_KEY secret found! Auto-generated key for this run: $GENERATED_KEY"
+            echo "encryption_key=$GENERATED_KEY" >> $GITHUB_OUTPUT
+          else
+            echo "encryption_key=${{ secrets.GODOT_ENCRYPTION_KEY }}" >> $GITHUB_OUTPUT
+          fi
+
+      # 4. Inject SCons settings via custom.py using explicit Python boolean rules
+      - name: Configure Engine Demands
+        run: |
+          echo 'rendering_device = False' >> custom.py
+          echo 'vulkan = False' >> custom.py
+          echo 'opengl = True' >> custom.py
+          echo 'deprecated = False' >> custom.py
+          echo 'minizip = False' >> custom.py
+
+      # 5. Compilation Steps (Debug + Release Templates embedded with encryption)
+      - name: Compile Release Template
+        env:
+          GODOT_VERSION_STATUS: dev2
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ steps.crypto-setup.outputs.encryption_key }}
         run: |
           scons platform=android \
-          target=template_debug \
-          arch=arm64 \
-          build_profile=$GITHUB_WORKSPACE/config-repo/ludmax.gdbuild \
-          dev_mode=yes \
-          module_text_server_fb_enabled=yes \
-          tests=no \
-          swappy=yes
+                -j$(nproc) \
+                target=template_release \
+                arch=arm64 \
+                build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
+                optimize=size \
+                lto=full \
+                debug_symbols=no \
+                module_text_server_fb_enabled=yes \
+                tests=no \
+                swappy=yes
 
-      - name: Compilation Release (Arm64)
+      - name: Compile Debug Template
+        env:
+          GODOT_VERSION_STATUS: dev2
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ steps.crypto-setup.outputs.encryption_key }}
         run: |
           scons platform=android \
-          target=template_release \
-          arch=arm64 \
-          build_profile=$GITHUB_WORKSPACE/config-repo/ludmax.gdbuild \
-          dev_mode=no \
-          module_text_server_fb_enabled=yes \
-          tests=no \
-          swappy=yes
+                -j$(nproc) \
+                target=template_debug \
+                arch=arm64 \
+                build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
+                optimize=size \
+                lto=full \
+                debug_symbols=no \
+                module_text_server_fb_enabled=yes \
+                tests=no \
+                swappy=yes
 
-      # --- ARM32 Builds ---
-      - name: Compilation Debug (Arm32)
-        run: |
-          scons platform=android \
-          target=template_debug \
-          arch=arm32 \
-          build_profile=$GITHUB_WORKSPACE/config-repo/ludmax.gdbuild \
-          dev_mode=yes \
-          module_text_server_fb_enabled=yes \
-          tests=no \
-          swappy=yes
-
-      - name: Compilation Release (Arm32)
-        run: |
-          scons platform=android \
-          target=template_release \
-          arch=arm32 \
-          build_profile=$GITHUB_WORKSPACE/config-repo/ludmax.gdbuild \
-          dev_mode=no \
-          module_text_server_fb_enabled=yes \
-          tests=no \
-          swappy=yes
-
-      # 4. Generate Templates & Bundle AARs
-      - name: Generate Godot Templates
+      # 6. Process compiled libraries into usable Android APKs/AARs
+      - name: Generate Godot Templates via Gradle
         run: |
           cd platform/android/java
           ./gradlew generateGodotTemplates
-          
-          # Copy the hidden .aar files to the bin folder so they are uploaded
-          echo "Copying AAR files..."
-          cp lib/build/outputs/aar/*.aar ../../../bin/
 
-      - name: Upload artifact
+      # 7. Upload compiled artifacts using Godot's internal structure path mapping
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android-template-4.5.1-universal
-          path: godot-source/bin/
+          name: android-templates-4.8-dev2-encrypted-arm64
+          path: |
+            godot-source/platform/android/java/lib/bin/*.apk
+            godot-source/platform/android/java/lib/bin/*.aar
