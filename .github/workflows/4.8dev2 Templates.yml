@@ -47,6 +47,10 @@ jobs:
       - name: Install 7zip
         run: sudo apt-get update && sudo apt-get install -y p7zip-full
 
+      # Download Perfetto for advanced profiling
+      - name: Install Perfetto
+        run: python misc/scripts/install_perfetto.py
+
       # 3. Download and extract the frame-pacing helper dependencies
       - name: Download and Extract Swappy
         run: |
