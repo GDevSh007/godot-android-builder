@@ -19,12 +19,12 @@ jobs:
         with:
           path: config-repo
 
-      # 2. Checkout Godot Source at 4.8-dev2 Tag
+      # 2. Checkout Godot Source at the Exact 4.8-dev2 Commit Hash
       - name: Checkout Godot Source
         uses: actions/checkout@v4
         with:
           repository: godotengine/godot
-          ref: 4.8.0.dev2
+          ref: 7220d456dcf116ae5499505a237b449c0b00cfce  # FIX: Targets exact 4.8-dev2 source tree
           path: godot-source
 
       - name: Set up Java 17
@@ -64,7 +64,6 @@ jobs:
       - name: Resolve Encryption Key
         id: crypto-setup
         run: |
-          # Check if secret exists, otherwise auto-generate a valid 64-character hex key
           if [ -z "${{ secrets.GODOT_ENCRYPTION_KEY }}" ]; then
             GENERATED_KEY=$(openssl rand -hex 32)
             echo "::warning:: No GODOT_ENCRYPTION_KEY secret found! Auto-generated key for this run: $GENERATED_KEY"
@@ -76,7 +75,8 @@ jobs:
       # 4. Inject SCons settings via custom.py using explicit Python boolean rules
       - name: Configure Engine Demands
         run: |
-          echo 'rendering_device = False' >> custom.py
+          # Keep rendering_device True so the engine links smoothly without compiler errors
+          echo 'rendering_device = True' >> custom.py
           echo 'vulkan = False' >> custom.py
           echo 'opengl = True' >> custom.py
           echo 'deprecated = False' >> custom.py
