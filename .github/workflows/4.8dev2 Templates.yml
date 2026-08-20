@@ -52,7 +52,8 @@ jobs:
         run: |
           TAG="from-source-2025-01-31"
           ASSET_NAME="godot-swappy.7z"
-          curl -L -o godot-swappy.7z https://github.com
+          # FIX: Restored the complete structural release path URL on a single line
+          curl -L -o godot-swappy.7z "https://github.com{TAG}/${ASSET_NAME}"
           mkdir -p thirdparty/swappy-frame-pacing
           7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
           cd thirdparty/swappy-frame-pacing
