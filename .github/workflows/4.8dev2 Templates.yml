@@ -50,10 +50,8 @@ jobs:
       # Download and extract the frame-pacing helper dependencies
       - name: Download and Extract Swappy
         run: |
-          TAG="from-source-2025-01-31"
-          ASSET_NAME="godot-swappy.7z"
-          # FIX: Restored the complete structural release path URL on a single line
-          curl -L -o godot-swappy.7z "https://github.com{TAG}/${ASSET_NAME}"
+          # Hardcoded absolute URL prevents any variable syntax typos
+          curl -L -o godot-swappy.7z "https://github.com"
           mkdir -p thirdparty/swappy-frame-pacing
           7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
           cd thirdparty/swappy-frame-pacing
