@@ -28,7 +28,7 @@ jobs:
           path: godot-source
 
       - name: Set up Java 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
@@ -47,14 +47,13 @@ jobs:
       - name: Install 7zip
         run: sudo apt-get update && sudo apt-get install -y p7zip-full
 
-      # Download Perfetto for advanced profiling
+      # Download Perfetto for advanced profiling (Clears debug warning)
       - name: Install Perfetto
         run: python misc/scripts/install_perfetto.py
 
       # 3. Download and extract the frame-pacing helper dependencies
       - name: Download and Extract Swappy
         run: |
-          # FIXED: Direct link to the official Godot Swappy frame-pacing release asset
           curl -L -o godot-swappy.7z "https://github.com/godotengine/godot-swappy/releases/download/from-source-2025-01-31/godot-swappy.7z"
           mkdir -p thirdparty/swappy-frame-pacing
           7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
@@ -119,20 +118,17 @@ jobs:
                 tests=no \
                 swappy=yes
 
-      # 7. Upload compiled artifacts from the correct Godot root bin/ folder
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v5
-        with:
-          name: android-templates-4.8-dev2-encrypted-arm64
-          path: |
-            godot-source/bin/*.apk
-            godot-source/bin/*.aar
+      # 7. PROCESS THE APKS - The missing step that packages the files!
+      - name: Generate Godot Templates via Gradle
+        run: |
+          cd platform/android/java
+          ./gradlew generateGodotTemplates
 
-      # 8. Upload compiled artifacts
+      # 8. Upload compiled artifacts from the correct Godot root bin/ folder
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-templates-4.8-dev2-encrypted-arm64
           path: |
-            godot-source/platform/android/java/lib/bin/*.apk
-            godot-source/platform/android/java/lib/bin/*.aar
+            godot-source/bin/*.apk
+            godot-source/bin/*.aar
