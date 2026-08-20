@@ -15,20 +15,20 @@ jobs:
     steps:
       # 1. Checkout Your Configuration Repo
       - name: Checkout Configs
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: config-repo
 
       # 2. Checkout Godot Source at the Exact 4.8-dev2 Commit Hash
       - name: Checkout Godot Source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: godotengine/godot
           ref: 7220d456dcf116ae5499505a237b449c0b00cfce
           path: godot-source
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -42,7 +42,7 @@ jobs:
         run: python -m pip install scons
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install 7zip
         run: sudo apt-get update && sudo apt-get install -y p7zip-full
@@ -124,7 +124,7 @@ jobs:
 
       # 8. Upload compiled artifacts from the correct Godot root bin/ folder
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: android-templates-4.8-dev2-encrypted-arm64
           path: |
