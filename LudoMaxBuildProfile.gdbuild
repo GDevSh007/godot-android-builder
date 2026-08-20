@@ -1,0 +1,34 @@
+{
+	"disabled_build_options": {
+		"accesskit": false,
+		"alsa": false,
+		"brotli": false,
+		"d3d12": false,
+		"disable_3d": true,
+		"disable_navigation_2d": true,
+		"disable_navigation_3d": true,
+		"disable_physics_2d": true,
+		"disable_physics_3d": true,
+		"disable_xr": true,
+		"forward_mobile_renderer": false,
+		"forward_plus_renderer": false,
+		"graphite": false,
+		"metal": false,
+		"module_godot_physics_2d_enabled": false,
+		"module_godot_physics_3d_enabled": false,
+		"module_jolt_physics_enabled": false,
+		"module_msdfgen_enabled": false,
+		"module_openxr_enabled": false,
+		"pulseaudio": false,
+		"rendering_device": false,
+		"sdl": false,
+		"vulkan": false,
+		"wayland": false,
+		"x11": false
+	},
+	"disabled_classes": [
+		"Node3D",
+		"WorldEnvironment"
+	],
+	"type": "build_profile"
+}
