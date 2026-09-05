@@ -101,7 +101,7 @@ jobs:
 
       - name: Compile Debug Template
         env:
-          GODOT_VERSION_STATUS: dev2
+          GODOT_VERSION_STATUS: dev4
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ steps.crypto-setup.outputs.encryption_key }}
         run: |
           scons platform=android \
@@ -126,7 +126,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: android-templates-4.8-dev2-encrypted-arm64
+          name: android-templates-4.8-dev4-encrypted-arm64
           path: |
             godot-source/bin/*.apk
             godot-source/bin/*.zip
