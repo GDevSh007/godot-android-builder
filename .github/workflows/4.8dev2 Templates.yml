@@ -1,4 +1,4 @@
-name: 🤖 Android Arm64 Template + PCK Encryption (Godot 4.8-dev2)
+name: 🤖 Android Arm64 Template + PCK Encryption (Godot 4.8-dev4)
 on:
   workflow_dispatch:
 
@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: godotengine/godot
-          ref: 7220d456dcf116ae5499505a237b449c0b00cfce
+          ref: b56a91878e7c94977e4af978968e41d0670c0a8b
           path: godot-source
 
       - name: Set up Java 17
@@ -75,7 +75,7 @@ jobs:
       # 5. Inject SCons settings via custom.py
       - name: Configure Engine Demands
         run: |
-          echo 'rendering_device = True' >> custom.py
+          echo 'rendering_device = False' >> custom.py
           echo 'vulkan = False' >> custom.py
           echo 'opengl = True' >> custom.py
           echo 'deprecated = False' >> custom.py
@@ -129,4 +129,4 @@ jobs:
           name: android-templates-4.8-dev2-encrypted-arm64
           path: |
             godot-source/bin/*.apk
-            godot-source/bin/*.aar
+            godot-source/bin/*.zip
