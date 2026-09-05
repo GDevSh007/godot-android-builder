@@ -70,8 +70,9 @@ jobs:
             echo "::error:: Critical: GODOT_ENCRYPTION_KEY secret is missing or empty! Aborting build."
             exit 1
           fi
+          echo "::add-mask::${{ secrets.GODOT_ENCRYPTION_KEY }}"
           echo "encryption_key=${{ secrets.GODOT_ENCRYPTION_KEY }}" >> $GITHUB_OUTPUT
-
+      
       # 5. Inject SCons settings via custom.py
       - name: Configure Engine Demands
         run: |
