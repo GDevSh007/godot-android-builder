@@ -59,7 +59,7 @@
 		"OpenXRInteractionProfile",
 		"Shape3D",
 		"Texture3D",
-		"World3D"
+		"World3D",
 		"WorldEnvironment"
 	],
 	"type": "build_profile"
