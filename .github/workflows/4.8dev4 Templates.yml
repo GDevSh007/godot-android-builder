@@ -1,0 +1,132 @@
+name: 🤖 Android Arm64 Template + PCK Encryption (Godot 4.8-dev4)
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-24.04
+    name: Android Arm64 Template Build
+    timeout-minutes: 90
+    
+    defaults:
+      run:
+        working-directory: godot-source
+
+    steps:
+      # 1. Checkout Your Configuration Repo
+      - name: Checkout Configs
+        uses: actions/checkout@v5
+        with:
+          path: config-repo
+
+      # 2. Checkout Godot Source at the Exact 4.8-dev4 Commit Hash
+      - name: Checkout Godot Source
+        uses: actions/checkout@v5
+        with:
+          repository: godotengine/godot
+          ref: b56a91878e7c94977e4af978968e41d0670c0a8b
+          path: godot-source
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install SCons
+        run: python -m pip install scons
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install 7zip
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
+
+      # Download Perfetto for advanced profiling (Clears debug warning)
+      - name: Install Perfetto
+        run: python misc/scripts/install_perfetto.py
+
+      # 3. Download and extract the frame-pacing helper dependencies
+      - name: Download and Extract Swappy
+        run: |
+          curl -L -o godot-swappy.7z "https://github.com/godotengine/godot-swappy/releases/download/from-source-2025-01-31/godot-swappy.7z"
+          mkdir -p thirdparty/swappy-frame-pacing
+          7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
+          cd thirdparty/swappy-frame-pacing
+          if [ -d android.* ]; then mv android.*/* .; fi
+          cd ../..
+          rm -f godot-swappy.7z
+
+      # 4. Setup Encryption Key (Strict validation)
+      - name: Resolve Encryption Key
+        id: crypto-setup
+        run: |
+          if [ -z "${{ secrets.GODOT_ENCRYPTION_KEY }}" ]; then
+            echo "::error:: Critical: GODOT_ENCRYPTION_KEY secret is missing or empty! Aborting build."
+            exit 1
+          fi
+          echo "encryption_key=${{ secrets.GODOT_ENCRYPTION_KEY }}" >> $GITHUB_OUTPUT
+
+      # 5. Inject SCons settings via custom.py
+      - name: Configure Engine Demands
+        run: |
+          echo 'rendering_device = False' >> custom.py
+          echo 'vulkan = False' >> custom.py
+          echo 'opengl = True' >> custom.py
+          echo 'deprecated = False' >> custom.py
+          echo 'minizip = False' >> custom.py
+
+      # 6. Compilation Steps (Debug + Release Templates embedded with encryption)
+      - name: Compile Release Template
+        env:
+          GODOT_VERSION_STATUS: dev2
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ steps.crypto-setup.outputs.encryption_key }}
+        run: |
+          scons platform=android \
+                -j$(nproc) \
+                target=template_release \
+                arch=arm64 \
+                build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
+                optimize=size \
+                lto=full \
+                debug_symbols=no \
+                module_text_server_fb_enabled=yes \
+                tests=no \
+                swappy=yes
+
+      - name: Compile Debug Template
+        env:
+          GODOT_VERSION_STATUS: dev2
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ steps.crypto-setup.outputs.encryption_key }}
+        run: |
+          scons platform=android \
+                -j$(nproc) \
+                target=template_debug \
+                arch=arm64 \
+                build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
+                optimize=size \
+                lto=full \
+                debug_symbols=no \
+                module_text_server_fb_enabled=yes \
+                tests=no \
+                swappy=yes
+
+      # 7. PROCESS THE APKS - The missing step that packages the files!
+      - name: Generate Godot Templates via Gradle
+        run: |
+          cd platform/android/java
+          ./gradlew generateGodotTemplates
+
+      # 8. Upload compiled artifacts from the correct Godot root bin/ folder
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: android-templates-4.8-dev2-encrypted-arm64
+          path: |
+            godot-source/bin/*.apk
+            godot-source/bin/*.zip
