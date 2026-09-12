@@ -109,7 +109,7 @@ jobs:
                 -j$(nproc) \
                 target=template_debug \
                 arch=arm64 \
-                build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
+                build_profile="$GITHUB_WORKSPACE/config-repo/Basic2Dconfig.gdbuild" \
                 optimize=size \
                 lto=full \
                 debug_symbols=no \
