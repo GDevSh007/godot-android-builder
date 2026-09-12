@@ -1,4 +1,4 @@
-name: 🤖 Android Arm64 Template + PCK Encryption (Godot 4.8-dev4)
+name: 🤖 Android Arm64 Template + PCK Encryption (Godot 4.8-dev5)
 on:
   workflow_dispatch:
 
@@ -19,12 +19,12 @@ jobs:
         with:
           path: config-repo
 
-      # 2. Checkout Godot Source at the Exact 4.8-dev4 Commit Hash
+      # 2. Checkout Godot Source at the Exact 4.8-dev5 Commit Hash
       - name: Checkout Godot Source
         uses: actions/checkout@v5
         with:
           repository: godotengine/godot
-          ref: b56a91878e7c94977e4af978968e41d0670c0a8b
+          ref: 9552dfb6859a1aaba1e570b8e0ef5c599b830f19
           path: godot-source
 
       - name: Set up Java 17
@@ -85,7 +85,7 @@ jobs:
       # 6. Compilation Steps (Debug + Release Templates embedded with encryption)
       - name: Compile Release Template
         env:
-          GODOT_VERSION_STATUS: dev2
+          GODOT_VERSION_STATUS: dev5
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ steps.crypto-setup.outputs.encryption_key }}
         run: |
           scons platform=android \
@@ -102,7 +102,7 @@ jobs:
 
       - name: Compile Debug Template
         env:
-          GODOT_VERSION_STATUS: dev4
+          GODOT_VERSION_STATUS: dev5
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ steps.crypto-setup.outputs.encryption_key }}
         run: |
           scons platform=android \
@@ -127,7 +127,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: android-templates-4.8-dev4-encrypted-arm64
+          name: android-templates-4.8-dev5-encrypted-arm64
           path: |
             godot-source/bin/*.apk
             godot-source/bin/*.zip
