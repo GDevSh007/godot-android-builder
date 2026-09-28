@@ -1,0 +1,78 @@
+name: Remote Build GoZen for Android
+
+on:
+  workflow_dispatch: # Allows manual triggering from the GitHub UI
+
+jobs:
+  build-and-export:
+    name: Build GoZen APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout External Repository
+        uses: actions/checkout@v4
+        with:
+          repository: VoylinsGamedevJourney/gozen
+          submodules: recursive # Fetches gde_gozen and other dependencies
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK & NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Python & SCons
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install SCons
+        run: pip install scons
+
+      - name: Compile FFmpeg & GDExtension
+        run: |
+          # GoZen's video playback requires FFmpeg and gde_gozen cross-compiled for Android
+          # This compiles the GDExtension for both required mobile architectures
+          cd gde_gozen
+          
+          # Note: If FFmpeg is not pre-compiled in the repo for Android, 
+          # you would run the FFmpeg cross-compilation bash script here first.
+          
+          scons platform=android target=template_release arch=arm64
+          scons platform=android target=template_release arch=arm32
+          
+          cd ..
+
+      - name: Inject Android Export Preset
+        run: |
+          # Since GoZen is primarily a desktop project, it likely lacks an Android export preset.
+          # This dynamically generates a basic preset to allow headless exporting.
+          cat <<EOF > export_presets.cfg
+          [preset.0]
+          name="Android"
+          platform="Android"
+          runnable=true
+          custom_template/debug=""
+          custom_template/release=""
+          EOF
+
+      - name: Setup Godot Headless
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: '4.3.2' # Adjust to match GoZen's required engine version
+          use-dotnet: false
+          include-templates: true
+
+      - name: Export Android APK
+        run: |
+          mkdir -p build
+          # Requires a valid debug keystore for exporting, which setup-android handles.
+          godot --headless --export-release "Android" build/GoZen.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GoZen-Android-APK
+          path: build/GoZen.apk
