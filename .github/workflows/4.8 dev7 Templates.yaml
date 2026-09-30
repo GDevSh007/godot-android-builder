@@ -104,6 +104,24 @@ jobs:
             module_text_server_fb_enabled=no \
             tests=no swappy=yes
 
+      - name: Patch scene_tree.cpp (missing physics guards)
+        run: |
+          python - <<'EOF'
+          p = "scene/main/scene_tree.cpp"
+          s = open(p, encoding="utf-8").read()
+          old = "return PhysicsServer2D::get_singleton()->debug_is_enabled() || PhysicsServer3D::get_singleton()->debug_is_enabled();"
+          new = """bool enabled = false;
+          #ifndef PHYSICS_2D_DISABLED
+          	enabled = enabled || PhysicsServer2D::get_singleton()->debug_is_enabled();
+          #endif
+          #ifndef PHYSICS_3D_DISABLED
+          	enabled = enabled || PhysicsServer3D::get_singleton()->debug_is_enabled();
+          #endif
+          	return enabled;"""
+          assert old in s, "target line not found, upstream changed"
+          open(p, "w", encoding="utf-8").write(s.replace(old, new))
+          EOF
+
       - name: Compile Debug Template + Generate APKs
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ secrets.GODOT_ENCRYPTION_KEY }}
