@@ -1,0 +1,126 @@
+name: 🤖 Android Arm64 Template + PCK Encryption (Godot 4.8-dev7)
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-24.04
+    name: Android Arm64 Template Build
+    timeout-minutes: 90
+
+    defaults:
+      run:
+        working-directory: godot-source
+
+    env:
+      SCONS_CACHE: ${{ github.workspace }}/godot-source/.scons_cache
+      GODOT_VERSION_STATUS: dev7
+
+    steps:
+      - name: Checkout Configs
+        uses: actions/checkout@v5
+        with:
+          path: config-repo
+
+      - name: Checkout Godot Source (4.8-dev7)
+        uses: actions/checkout@v5
+        with:
+          repository: godotengine/godot
+          ref: c971f93e7e76b0ef919bf6009e7b868bea04db7f
+          path: godot-source
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install SCons
+        run: python -m pip install scons
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'build-tools;36.1.0 platforms;android-36 ndk;29.0.14206865 cmdline-tools;latest'
+
+      - name: Install 7zip
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
+
+      - name: Install Perfetto
+        run: python misc/scripts/install_perfetto.py
+
+      - name: Download and Extract Swappy
+        run: |
+          curl -L -o godot-swappy.7z "https://github.com/godotengine/godot-swappy/releases/download/from-source-2025-01-31/godot-swappy.7z"
+          mkdir -p thirdparty/swappy-frame-pacing
+          7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
+          cd thirdparty/swappy-frame-pacing
+          if [ -d android.* ]; then mv android.*/* .; fi
+          cd ../..
+          rm -f godot-swappy.7z
+
+      - name: Validate Encryption Key
+        env:
+          KEY: ${{ secrets.GODOT_ENCRYPTION_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::GODOT_ENCRYPTION_KEY secret is missing or empty!"
+            exit 1
+          fi
+          if ! [[ "$KEY" =~ ^[0-9a-fA-F]{64}$ ]]; then
+            echo "::error::GODOT_ENCRYPTION_KEY must be exactly 64 hex characters!"
+            exit 1
+          fi
+
+      - name: Configure Engine Demands
+        run: |
+          echo 'rendering_device = False' >> custom.py
+          echo 'vulkan = False' >> custom.py
+          echo 'opengl3 = True' >> custom.py
+          echo 'deprecated = False' >> custom.py
+          echo 'minizip = False' >> custom.py
+
+      - name: Cache SCons
+        uses: actions/cache@v4
+        with:
+          path: godot-source/.scons_cache
+          key: scons-android-arm64-${{ github.sha }}
+          restore-keys: scons-android-arm64-
+
+      - name: Compile Release Template
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ secrets.GODOT_ENCRYPTION_KEY }}
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/29.0.14206865
+        run: |
+          scons platform=android target=template_release arch=arm64 \
+            -j$(nproc) \
+            build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
+            optimize=size lto=full debug_symbols=no \
+            module_text_server_fb_enabled=no \
+            tests=no swappy=yes
+
+      - name: Compile Debug Template + Generate APKs
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ secrets.GODOT_ENCRYPTION_KEY }}
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/29.0.14206865
+        run: |
+          scons platform=android target=template_debug arch=arm64 \
+            -j$(nproc) \
+            build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
+            optimize=size lto=full debug_symbols=no \
+            module_text_server_fb_enabled=no \
+            tests=no swappy=yes \
+            generate_android_binaries=yes
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: android-templates-4.8-dev7-encrypted-arm64
+          path: |
+            godot-source/bin/*.apk
+            godot-source/bin/*.zip
