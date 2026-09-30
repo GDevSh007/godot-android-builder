@@ -26,7 +26,6 @@
 		"x11": false
 	},
 	"disabled_classes": [
-        "GDExtension",
 		"GLTFAccessor",
 		"GLTFAnimation",
 		"GLTFBufferView",
