@@ -77,6 +77,30 @@ jobs:
             exit 1
           fi
 
+      - name: Patch scene_tree.cpp (missing physics guards)
+        run: |
+          python - <<'EOF'
+          p = "scene/main/scene_tree.cpp"
+          s = open(p, encoding="utf-8").read()
+          old = "return PhysicsServer2D::get_singleton()->debug_is_enabled() || PhysicsServer3D::get_singleton()->debug_is_enabled();"
+          new = """bool enabled = false;
+          #ifndef PHYSICS_2D_DISABLED
+          	enabled = enabled || PhysicsServer2D::get_singleton()->debug_is_enabled();
+          #endif
+          #ifndef PHYSICS_3D_DISABLED
+          	enabled = enabled || PhysicsServer3D::get_singleton()->debug_is_enabled();
+          #endif
+          	return enabled;"""
+          assert old in s, "target line not found, upstream changed"
+          open(p, "w", encoding="utf-8").write(s.replace(old, new))
+          EOF
+          echo "---- patched region ----"
+          sed -n '972,992p' scene/main/scene_tree.cpp
+          echo "---- existing physics guards ----"
+          grep -n "PHYSICS_.D_DISABLED" scene/main/scene_tree.cpp
+          echo "---- git diff ----"
+          git diff --stat
+
       - name: Configure Engine Demands
         run: |
           echo 'rendering_device = False' >> custom.py
@@ -103,24 +127,6 @@ jobs:
             optimize=size lto=full debug_symbols=no \
             module_text_server_fb_enabled=no \
             tests=no swappy=yes
-
-      - name: Patch scene_tree.cpp (missing physics guards)
-        run: |
-          python - <<'EOF'
-          p = "scene/main/scene_tree.cpp"
-          s = open(p, encoding="utf-8").read()
-          old = "return PhysicsServer2D::get_singleton()->debug_is_enabled() || PhysicsServer3D::get_singleton()->debug_is_enabled();"
-          new = """bool enabled = false;
-          #ifndef PHYSICS_2D_DISABLED
-          	enabled = enabled || PhysicsServer2D::get_singleton()->debug_is_enabled();
-          #endif
-          #ifndef PHYSICS_3D_DISABLED
-          	enabled = enabled || PhysicsServer3D::get_singleton()->debug_is_enabled();
-          #endif
-          	return enabled;"""
-          assert old in s, "target line not found, upstream changed"
-          open(p, "w", encoding="utf-8").write(s.replace(old, new))
-          EOF
 
       - name: Compile Debug Template + Generate APKs
         env:
