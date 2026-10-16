@@ -87,8 +87,10 @@ jobs:
             -j$(nproc) \
             $VK_FLAGS \
             optimize=size lto=full debug_symbols=no \
-            deprecated=no \
             module_text_server_fb_enabled=no \
+            module_mobile_vr_enabled=no \
+            module_openxr_enabled=no \
+            module_camera_enabled=no \
             tests=no swappy=yes \
             generate_android_binaries=yes
 
