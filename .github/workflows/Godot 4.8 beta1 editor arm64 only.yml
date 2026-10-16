@@ -1,0 +1,100 @@
+name: 📱 Godot 4.8-beta1 Android Editor (ARM64 Only)
+on:
+  workflow_dispatch:
+    inputs:
+      strip_vulkan:
+        description: 'Strip Vulkan/RD for a smaller GLES3-only Editor?'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build-android-editor:
+    runs-on: ubuntu-24.04
+    name: Build ARM64 Android Editor APK
+    timeout-minutes: 90
+
+    defaults:
+      run:
+        working-directory: godot-source
+
+    env:
+      SCONS_CACHE: ${{ github.workspace }}/godot-source/.scons_cache
+      SCONS_CACHE_LIMIT: 4096
+      GODOT_VERSION_STATUS: beta1
+
+    steps:
+      - name: Checkout Godot Source (4.8-beta1)
+        uses: actions/checkout@v5
+        with:
+          repository: godotengine/godot
+          ref: 4d10419cacd6d3009976e8f9fd3abd970fd58018
+          path: godot-source
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install SCons
+        run: python -m pip install scons
+
+      - name: Setup Android SDK & NDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'build-tools;36.1.0 platforms;android-36 ndk;29.0.14206865 cmdline-tools;latest'
+
+      - name: Install 7zip
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
+
+      - name: Download and Extract Swappy
+        run: |
+          curl -L -o godot-swappy.7z "https://github.com/godotengine/godot-swappy/releases/download/from-source-2025-01-31/godot-swappy.7z"
+          mkdir -p thirdparty/swappy-frame-pacing
+          7z x godot-swappy.7z -othirdparty/swappy-frame-pacing -y
+          cd thirdparty/swappy-frame-pacing
+          for dir in android.*; do [ -d "$dir" ] && mv "$dir"/* . && rmdir "$dir"; done
+          cd ../..
+          rm -f godot-swappy.7z
+
+      - name: Cache SCons
+        uses: actions/cache@v4
+        with:
+          path: godot-source/.scons_cache
+          key: scons-android-editor-arm64-4d10419-vk-${{ inputs.strip_vulkan }}
+          restore-keys: |
+            scons-android-editor-arm64-4d10419-
+            scons-android-editor-arm64-
+
+      - name: Compile ARM64 Android Editor + Generate APK
+        env:
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/29.0.14206865
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"
+        run: |
+          if [ "${{ inputs.strip_vulkan }}" = "true" ]; then
+            VK_FLAGS="vulkan=no rendering_device=no opengl3=yes"
+          else
+            VK_FLAGS="vulkan=yes rendering_device=yes opengl3=yes"
+          fi
+
+          scons platform=android target=editor arch=arm64 \
+            -j$(nproc) \
+            $VK_FLAGS \
+            optimize=size lto=full debug_symbols=no \
+            deprecated=no \
+            module_text_server_fb_enabled=no \
+            tests=no swappy=yes \
+            generate_android_binaries=yes
+
+      - name: Upload Android Editor APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: godot-4.8-beta1-android-editor-arm64
+          path: |
+            godot-source/bin/*editor*.apk
