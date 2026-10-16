@@ -96,21 +96,22 @@ jobs:
             tests=no swappy=yes \
             generate_android_binaries=yes
 
-          # Fallback if SCons didn't assemble the Editor APK automatically
-          if ! find bin/ platform/android/java/editor/ -name "*.apk" | grep -q "."; then
-            echo "Assembling Android Editor APK via Gradle..."
+          # Check if any APK was created; if not, explicitly build the Editor APK via Gradle
+          if ! find bin/ platform/android/java/ -name "*.apk" | grep -q "."; then
+            echo "No APK found after SCons! Running Gradle :editor:assembleAndroidDebug..."
             cd platform/android/java
             ./gradlew :editor:assembleAndroidDebug
             cd ../../..
           fi
 
-          echo "=== Generated APKs ==="
-          find bin/ platform/android/java/ -name "*.apk"
+          # Copy all generated APKs into a single flat folder so upload-artifact never misses them
+          mkdir -p "$GITHUB_WORKSPACE/apk-output"
+          find bin/ platform/android/java/ -name "*.apk" -exec cp -v {} "$GITHUB_WORKSPACE/apk-output/" \;
+          ls -lh "$GITHUB_WORKSPACE/apk-output/"
 
       - name: Upload Android Editor APK
         uses: actions/upload-artifact@v5
         with:
           name: godot-4.8-beta1-android-editor-arm64
-          path: |
-            godot-source/bin/**/*.apk
-            godot-source/platform/android/java/editor/build/outputs/apk/**/*.apk
+          path: ${{ github.workspace }}/apk-output/*.apk
+          if-no-files-found: error
