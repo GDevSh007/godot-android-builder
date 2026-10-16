@@ -12,15 +12,13 @@ jobs:
   build-android-editor:
     runs-on: ubuntu-24.04
     name: Build ARM64 Android Editor APK
-    timeout-minutes: 120
+    timeout-minutes: 90
 
     defaults:
       run:
         working-directory: godot-source
 
     env:
-      SCONS_CACHE: ${{ github.workspace }}/godot-source/.scons_cache
-      SCONS_CACHE_LIMIT: 4096
       GODOT_VERSION_STATUS: beta1
 
     steps:
@@ -40,7 +38,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.12'
 
       - name: Install SCons
         run: python -m pip install scons
@@ -71,6 +69,7 @@ jobs:
           restore-keys: |
             scons-android-editor-arm64-4d10419-
             scons-android-editor-arm64-
+          save-always: true
 
       - name: Compile ARM64 Android Editor + Generate APK
         env:
@@ -85,8 +84,11 @@ jobs:
 
           scons platform=android target=editor arch=arm64 \
             -j$(nproc) \
+            cache_path="$GITHUB_WORKSPACE/godot-source/.scons_cache" \
+            cache_limit=4096 \
             $VK_FLAGS \
             optimize=size lto=full debug_symbols=no \
+            accesskit=no \
             module_text_server_fb_enabled=no \
             module_mobile_vr_enabled=no \
             module_openxr_enabled=no \
@@ -94,9 +96,21 @@ jobs:
             tests=no swappy=yes \
             generate_android_binaries=yes
 
+          # Fallback if SCons didn't assemble the Editor APK automatically
+          if ! find bin/ platform/android/java/editor/ -name "*.apk" | grep -q "."; then
+            echo "Assembling Android Editor APK via Gradle..."
+            cd platform/android/java
+            ./gradlew :editor:assembleAndroidDebug
+            cd ../../..
+          fi
+
+          echo "=== Generated APKs ==="
+          find bin/ platform/android/java/ -name "*.apk"
+
       - name: Upload Android Editor APK
         uses: actions/upload-artifact@v5
         with:
           name: godot-4.8-beta1-android-editor-arm64
           path: |
-            godot-source/bin/*editor*.apk
+            godot-source/bin/**/*.apk
+            godot-source/platform/android/java/editor/build/outputs/apk/**/*.apk
