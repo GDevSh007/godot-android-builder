@@ -1,4 +1,4 @@
-name: 🤖 Android Arm64 Template + PCK Encryption (Godot 4.8-dev7)
+name: 🤖 Android Arm64 Template + PCK Encryption (Godot 4.8-beta1)
 on:
   workflow_dispatch:
 
@@ -14,7 +14,7 @@ jobs:
 
     env:
       SCONS_CACHE: ${{ github.workspace }}/godot-source/.scons_cache
-      GODOT_VERSION_STATUS: dev7
+      GODOT_VERSION_STATUS: beta1
 
     steps:
       - name: Checkout Configs
@@ -22,11 +22,11 @@ jobs:
         with:
           path: config-repo
 
-      - name: Checkout Godot Source (4.8-dev7)
+      - name: Checkout Godot Source (4.8-beta1)
         uses: actions/checkout@v5
         with:
           repository: godotengine/godot
-          ref: c971f93e7e76b0ef919bf6009e7b868bea04db7f
+          ref: 4d10419cacd6d3009976e8f9fd3abd970fd58018
           path: godot-source
 
       - name: Set up Java 17
@@ -140,7 +140,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: android-templates-4.8-dev7-encrypted-arm64
+          name: custom-android-templates-4.8-beta1-encrypted-arm64
           path: |
             godot-source/bin/*.apk
             godot-source/bin/*.zip
