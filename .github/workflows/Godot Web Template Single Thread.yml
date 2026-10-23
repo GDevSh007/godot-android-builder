@@ -1,0 +1,128 @@
+name: 🌐 Web Single-Thread Template + PCK Encryption (Godot 4.8-beta1)
+on:
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-24.04
+    name: Web (No Threads) Template Build
+    timeout-minutes: 90
+
+    defaults:
+      run:
+        working-directory: godot-source
+
+    env:
+      SCONS_CACHE: ${{ github.workspace }}/godot-source/.scons_cache
+      GODOT_VERSION_STATUS: beta1
+      EM_VERSION: 6.0.1 # Emscripten 6.x is used for Godot 4.8; you can also use 'latest'
+
+    steps:
+      - name: Checkout Configs
+        uses: actions/checkout@v5
+        with:
+          path: config-repo
+
+      - name: Checkout Godot Source (4.8-beta1)
+        uses: actions/checkout@v5
+        with:
+          repository: godotengine/godot
+          ref: 4d10419cacd6d3009976e8f9fd3abd970fd58018
+          path: godot-source
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install SCons
+        run: python -m pip install scons
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ env.EM_VERSION }}
+          actions-cache-folder: emsdk-cache
+
+      - name: Verify Emscripten
+        run: emcc -v
+
+      - name: Validate Encryption Key
+        env:
+          KEY: ${{ secrets.GODOT_ENCRYPTION_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::GODOT_ENCRYPTION_KEY secret is missing or empty!"
+            exit 1
+          fi
+          if ! [[ "$KEY" =~ ^[0-9a-fA-F]{64}$ ]]; then
+            echo "::error::GODOT_ENCRYPTION_KEY must be exactly 64 hex characters!"
+            exit 1
+          fi
+
+      - name: Configure Engine Demands
+        run: |
+          echo 'rendering_device = False' >> custom.py
+          echo 'vulkan = False' >> custom.py
+          echo 'opengl3 = True' >> custom.py
+          echo 'deprecated = False' >> custom.py
+          echo 'description = "Custom Single-Thread Web Build"' >> custom.py
+          # NOTE: Do NOT set minizip = False for Web builds! 
+          # Godot's Web platform requires minizip to package the final output .zip archive.
+
+      - name: Cache SCons
+        uses: actions/cache@v4
+        with:
+          path: godot-source/.scons_cache
+          key: scons-web-nothreads-${{ github.sha }}
+          restore-keys: scons-web-nothreads-
+
+      - name: Patch scene_tree.cpp (Physics Debug Fix)
+        run: |
+          python - <<'EOF'
+          p = "scene/main/scene_tree.cpp"
+          s = open(p, encoding="utf-8").read()
+          old = "return PhysicsServer2D::get_singleton()->debug_is_enabled() || PhysicsServer3D::get_singleton()->debug_is_enabled();"
+          new = """bool enabled = false;
+          #ifndef PHYSICS_2D_DISABLED
+          	enabled = enabled || PhysicsServer2D::get_singleton()->debug_is_enabled();
+          #endif
+          #ifndef PHYSICS_3D_DISABLED
+          	enabled = enabled || PhysicsServer3D::get_singleton()->debug_is_enabled();
+          #endif
+          	return enabled;"""
+          if old in s:
+              open(p, "w", encoding="utf-8").write(s.replace(old, new))
+              print("PATCHED scene_tree.cpp")
+          else:
+              print("PATCH NOT APPLIED, line not found")
+          EOF
+
+      - name: Compile Release Template (Single-Threaded)
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ secrets.GODOT_ENCRYPTION_KEY }}
+        run: |
+          scons platform=web target=template_release threads=no arch=wasm32 \
+            -j$(nproc) \
+            build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
+            optimize=size lto=full debug_symbols=no \
+            module_text_server_fb_enabled=no \
+            tests=no
+
+      - name: Compile Debug Template (Single-Threaded)
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ secrets.GODOT_ENCRYPTION_KEY }}
+        run: |
+          scons platform=web target=template_debug threads=no arch=wasm32 \
+            -j$(nproc) \
+            build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
+            optimize=size lto=full debug_symbols=no \
+            module_text_server_fb_enabled=no \
+            tests=no
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-web-nothreads-templates-4.8-beta1-encrypted
+          path: |
+            godot-source/bin/*.zip
