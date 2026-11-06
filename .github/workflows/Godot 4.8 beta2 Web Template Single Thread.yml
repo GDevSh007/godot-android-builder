@@ -66,7 +66,6 @@ jobs:
           echo 'vulkan = False' >> custom.py
           echo 'opengl3 = True' >> custom.py
           echo 'deprecated = False' >> custom.py
-          echo 'module_enet_enabled = False' >> custom.py
           echo 'module_minimp3_enabled = False' >> custom.py
           # NOTE: Do NOT set minizip = False for Web builds!
           # Godot's Web platform requires minizip to package the final output .zip archive.
@@ -107,6 +106,7 @@ jobs:
             -j$(nproc) \
             build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
             optimize=size_extra lto=full debug_symbols=no \
+            module_text_server_fb_enabled=yes \
             tests=no
 
       - name: Compile Debug Template (Single-Threaded)
@@ -117,6 +117,7 @@ jobs:
             -j$(nproc) \
             build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
             optimize=size_extra lto=full debug_symbols=no \
+            module_text_server_fb_enabled=yes \
             tests=no
 
       - name: Upload Artifacts
