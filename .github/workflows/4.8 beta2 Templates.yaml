@@ -100,7 +100,7 @@ jobs:
           scons platform=android target=template_release arch=arm64 \
             -j$(nproc) \
             build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
-            optimize=size lto=full debug_symbols=no \
+            optimize=size_extra lto=full debug_symbols=no \
             module_text_server_fb_enabled=no \
             tests=no swappy=yes
 
@@ -132,7 +132,7 @@ jobs:
           scons platform=android target=template_debug arch=arm64 \
             -j$(nproc) \
             build_profile="$GITHUB_WORKSPACE/config-repo/LudoMaxBuildProfile.gdbuild" \
-            optimize=size lto=full debug_symbols=no \
+            optimize=size_extra lto=full debug_symbols=no \
             module_text_server_fb_enabled=no \
             tests=no swappy=yes \
             generate_android_binaries=yes
