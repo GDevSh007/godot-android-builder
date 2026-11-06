@@ -1,4 +1,4 @@
-name: 🌐 Web Single-Thread Template + PCK Encryption (Godot 4.8-beta1)
+name: 🌐 Web Single-Thread Template + PCK Encryption (Godot 4.8-beta2)
 on:
   workflow_dispatch:
 
@@ -14,7 +14,7 @@ jobs:
 
     env:
       SCONS_CACHE: ${{ github.workspace }}/godot-source/.scons_cache
-      GODOT_VERSION_STATUS: beta1
+      GODOT_VERSION_STATUS: beta2
       EM_VERSION: 6.0.1 # Emscripten 6.x is used for Godot 4.8; you can also use 'latest'
 
     steps:
@@ -23,11 +23,11 @@ jobs:
         with:
           path: config-repo
 
-      - name: Checkout Godot Source (4.8-beta1)
+      - name: Checkout Godot Source (4.8-beta2)
         uses: actions/checkout@v5
         with:
           repository: godotengine/godot
-          ref: 4d10419cacd6d3009976e8f9fd3abd970fd58018
+          ref: cafc17a192acf67903910a68aeb3c076c0907a4b
           path: godot-source
 
       - name: Set up Python
@@ -123,6 +123,6 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: custom-web-nothreads-templates-4.8-beta1-encrypted
+          name: custom-web-nothreads-templates-4.8-beta2-encrypted
           path: |
             godot-source/bin/*.zip
