@@ -4,7 +4,7 @@ on:
 
 jobs:
   build-web:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     name: Web (No Threads) Template Build
     timeout-minutes: 90
 
@@ -15,7 +15,7 @@ jobs:
     env:
       SCONS_CACHE: ${{ github.workspace }}/godot-source/.scons_cache
       GODOT_VERSION_STATUS: beta2
-      EM_VERSION: 6.0.1 # Emscripten 6.x is used for Godot 4.8; you can also use 'latest'
+      EM_VERSION: 6.0.12 # Emscripten 6.x is used for Godot 4.8; you can also use 'latest'
 
     steps:
       - name: Checkout Configs
